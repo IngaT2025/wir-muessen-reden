@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zeitleiste</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style-timeline.css">
+</head>
+<body class="timeline-page">
+    <header>
+        <div class="container nav"><a class="logo" href="index.html">WIR MÜSSEN <span class="red">REDEN...</span></a>
+            <nav class="menu"><a href="index.html">Start</a><a href="geschichte.html">Die Geschichte</a><a
+                    href="dokumente.html">Originaldokumente</a><a href="presse.html">Presse</a><a
+                    href="faq.html">FAQ</a><a href="ueber.html">Über</a></nav>
+        </div>
+    </header>
+    <main>
+
+    <!--Zeitleiste Daten Start --------------------------------------------------------------- -->
+
+    <div id="html-event-data" style="display: none;">
+
+        <div class="data-entry" data-date="2025-01-10" data-category="work">
+            <div class="data-short-desc">Jahresplanung für <b>2025</b>. Zwei Zeilen Platz, aber dieser Satz ist zu lang für ein Smartphone Display.</div>
+            <div class="data-full-details">
+                <p>Hier steht der ausführliche Text für das Modal-Fenster.</p>
+                <ul>
+                    <li><a href="https://web.de">Agenda</a> abstimmen</li>
+                    <li>Rollen definieren</li>
+                </ul>
+                <p>Link zur Dokumentation: <a href="#">Dokument.pdf</a></p>
+            </div>
+        </div>
+
+        <div class="data-entry" data-date="2025-02-28" data-category="holiday">
+            <div class="data-short-desc">Abfahrt in die Alpen!</div>
+            <div class="data-full-details">
+                <p>Unterkunft gebucht im Gasthof Bergsee. Rückkehr am 07.03.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!--Zeitleiste Daten Ende  --------------------------------------------------------------- -->
+
+
+    <div class="timeline-shell">
+        <div class="controls">
+            <!--<label for="zoomRange">Zoom</label>-->
+            <input type="range" id="zoomRange" min="0.02" max="1.0" step="0.01" value="0.2">
+        </div>
+
+        <div id="viewport">
+            <div id="calendar-sheet">
+                <!-- Programmatically populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <dialog id="detailsModal">
+        <h2 id="modalDate" style="font-size: 14px; color: var(--text-muted); margin: 0 0 4px 0;">01.01.2025</h2>
+        <h1 id="modalTitle" style="font-size: 14px; margin: 0 0 12px 0; color: #0f172a;">Event</h1>
+        <p id="modalDesc" style="font-size: 14px; color: #334155; margin: 0; line-height: 1.5;">Details...</p>
+        <button onclick="document.getElementById('detailsModal').close()">Schließen</button>
+    </dialog>
+
+
+    </main>
+    <footer class="footer">
+        <div class="container">WIR MÜSSEN REDEN... · Eine Dokumentation zum Fall im JUZE Gnarrenburg<div
+                class="footer-links"><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a><a
+                    href="quellen.html">Quellen & Transparenz</a><a href="rechtlicher-hinweis.html">Rechtlicher
+                    Hinweis</a></div>
+        </div>
+    </footer>
+
+
+<script>
+
+const timelineFooter = document.querySelector('body.timeline-page .footer');
+const headerEl = document.querySelector('body.timeline-page header');
+
+function updateTimelineFooterState() {
+    if (!timelineFooter || !viewport) return;
+
+    const viewportNearBottom = viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 24;
+    timelineFooter.classList.toggle('is-visible', viewportNearBottom);
+
+    const footerHeight = timelineFooter.classList.contains('is-visible') ? 180 : 0;
+    const headerHeight = headerEl ? headerEl.offsetHeight : 0;
+    const viewportTarget = Math.max(320, window.innerHeight - headerHeight - footerHeight - 30);
+    viewport.style.height = `${viewportTarget}px`;
+}
+
+window.addEventListener('scroll', updateTimelineFooterState, { passive: true });
+window.addEventListener('resize', updateTimelineFooterState);
+
+// Configuration date range
+const startDate = new Date("2025-01-01");
+const endDate = new Date("2026-02-01");
+
+const sheet = document.getElementById('calendar-sheet');
+
+let currentYear = null;
+let daysSinceLastEvent = 0;
+let eventTracker = 0; // Tracks consecutive events to omit gaps
+
+// TIMELINE GENERATION
+
+const myEvents = {};
+
+document.querySelectorAll('#html-event-data .data-entry').forEach(entry => {
+    const dateKey = entry.getAttribute('data-date');
+    
+    // Store the actual HTML fragments directly inside our object memory
+    myEvents[dateKey] = {
+        category: entry.getAttribute('data-category'),
+        shortHTML: entry.querySelector('.data-short-desc').innerHTML,
+        detailsHTML: entry.querySelector('.data-full-details').innerHTML
+    };
+});
+
+let rowIndex = 0;
+for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    rowIndex += 1;
+    const year = d.getFullYear();
+
+    // Render Year Header Banner if the year shifts
+    if (year !== currentYear) {
+        currentYear = year;
+        const yearBanner = document.createElement('div');
+        yearBanner.className = 'year-header';
+        yearBanner.style = `grid-row: ${rowIndex};`;
+        yearBanner.innerText = currentYear;
+        sheet.appendChild(yearBanner);
+        rowIndex += 1;
+    }
+
+    // Standardize key layout (YYYY-MM-DD)
+    const dateString = d.toISOString().split('T')[0];
+    const event = myEvents[dateString];
+
+    const isWeekend = (d.getDay() === 0 || d.getDay() === 6);
+
+    // Format labels
+    const dayStr = String(d.getDate()).padStart(2, '0');
+    const monthStr = String(d.getMonth() + 1).padStart(2, '0');
+    const displayDate = `${dayStr}.${monthStr}.`;
+
+    // Initialize row component
+    const row = document.createElement('div');
+    row.className = `day-row ${isWeekend ? 'is-weekend' : ''} ${!event ? 'is-empty' : ''}`;
+    row.style = `grid-row: ${rowIndex};`;  //  --row-height: var(${!event ? '--empty-row-height' : '--event-row-height'});
+
+    // Create Date Display Column cell
+    const dateCell = document.createElement('div');
+    dateCell.className = 'date-cell';
+    dateCell.innerText = displayDate;
+    row.appendChild(dateCell);
+
+    // Create Right Content Column cell
+    const contentCell = document.createElement('div');
+    contentCell.className = 'content-cell';
+
+    if (event) {
+        contentCell.setAttribute('data-cat', event.category); 
+        contentCell.innerHTML = `<div class="short-desc-preview">${event.shortHTML}</div>`;
+        
+        // Click Binding for Modal Window popup
+        row.addEventListener('click', () => {
+            document.getElementById('modalDate').innerText = `${displayDate}${year}`;
+            document.getElementById('modalTitle').innerHTML = event.shortHTML;
+            document.getElementById('modalDesc').innerHTML = event.detailsHTML;
+            document.getElementById('detailsModal').showModal();
+        });
+    }
+    row.appendChild(contentCell);
+    sheet.appendChild(row);
+}
+const row1 = document.createElement('div');
+row1.className = "timeline-span";
+row1.style = "grid-row: 5 / 21;"; 
+row1.innerText = "48 Tage";
+sheet.appendChild(row1);
+const row2 = document.createElement('div');
+row2.className = "timeline-span";
+row2.style = "grid-row: 22 / 78;"; 
+row2.innerText = "13 Monate und  4 Tage";
+sheet.appendChild(row2);
+
+// SETUP ZOOM
+
+const zoomRange = document.getElementById('zoomRange');
+const viewport = document.getElementById('viewport');
+viewport.addEventListener('scroll', updateTimelineFooterState, { passive: true });
+updateTimelineFooterState();
+
+const minEmptyRowHeight = 1.5; // Condensed down to barcode ticks
+const maxEmptyRowHeight = 35;  // Standard kitchen grid view size
+
+zoomRange.min = minEmptyRowHeight;
+zoomRange.max = maxEmptyRowHeight;
+zoomRange.value = 10; // minEmptyRowHeight; // Default to overview mode on start
+
+function applyZoom(emptyRowHeightPx, anchorY = 0) {
+    if (!sheet || !viewport) return;
+    const currentScrollTop = viewport.scrollTop;
+    const oldEmptyHeight = parseFloat(getComputedStyle(sheet).getPropertyValue('--empty-row-height')) || minEmptyRowHeight;
+
+    // Apply the scaling variable to empty rows exclusively
+    sheet.style.setProperty('--empty-row-height', `${emptyRowHeightPx}px`);
+
+    const fadeFactor = (emptyRowHeightPx - 8) / (16 - 8);
+    sheet.style.setProperty('--empty-row-opacity', Math.min(Math.max(fadeFactor, 0), 1));
+
+    if (oldEmptyHeight > 0) {
+        const ratio = emptyRowHeightPx / oldEmptyHeight;
+        viewport.scrollTop = (currentScrollTop + anchorY) * ratio - anchorY;
+    }
+}
+
+// Initial setting
+applyZoom(10, 0);
+
+zoomRange.addEventListener('input', (e) => {
+    applyZoom(parseFloat(e.target.value), 0);
+});
+
+// 1. FIX TABLET WINDOW ZOOM (Intercepts Ctrl+Wheel and Touch-Gestures cleanly)
+viewport.addEventListener('wheel', (e) => {
+    if (e.ctrlKey) {
+        e.preventDefault(); 
+        const currentHeight = parseFloat(getComputedStyle(sheet).getPropertyValue('--empty-row-height'));
+        const baseZoomFactor = 1.25;
+        const zoomFactor = e.deltaY < 0 ? baseZoomFactor : 1/baseZoomFactor; 
+        let targetHeight = Math.max(minEmptyRowHeight, Math.min(currentHeight * zoomFactor, maxEmptyRowHeight));
+        
+        zoomRange.value = targetHeight;
+        applyZoom(targetHeight, 0);
+    }
+}, { passive: false });
+
+
+// 3. RESTORE CANVAS PANNING DRAG (Desktop Drag-to-Scroll & Tablet Glide Optimization)
+let isDraggingCanvas = false;
+let startY = 0;
+let startScrollTop = 0;
+
+viewport.addEventListener('mousedown', (e) => {
+    // Ignore drag action if clicking on buttons or input ranges
+    if (e.target.closest('.controls')) return;
+    isDraggingCanvas = true;
+    startY = e.clientY;
+    startScrollTop = viewport.scrollTop;
+    viewport.style.cursor = 'grabbing';
+    e.preventDefault();
+});
+
+window.addEventListener('mousemove', (e) => {
+    if (!isDraggingCanvas) return;
+    const deltaY = e.clientY - startY;
+    viewport.scrollTop = startScrollTop - deltaY; // Moves layout naturally with your pointer direction
+});
+
+window.addEventListener('mouseup', () => {
+    isDraggingCanvas = false;
+    viewport.style.cursor = 'default';
+});
+
+// --- HARD OVERRIDE: BLOCKS SAFARI WINDOW ZOOM & IMPLEMENTS CUSTOM PINCH ---
+let initialPinchDistance = 0;
+let initialRowHeightOnPinch = 0;
+
+// Helper function to calculate the exact distance between two touch points
+function getDistanceBetweenTouches(t1, t2) {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// 1. INTERCEPT START GESTURES (iOS Specific & Multitouch standard)
+document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+
+viewport.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        e.preventDefault(); // Stop native tablet window sizing actions dead!
+        
+        // Record starting fingers distance metrics
+        initialPinchDistance = getDistanceBetweenTouches(e.touches[0], e.touches[1]);
+        initialRowHeightOnPinch = parseFloat(getComputedStyle(sheet).getPropertyValue('--empty-row-height')) || minEmptyRowHeight;
+    }
+}, { passive: false });
+
+viewport.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && initialPinchDistance > 0) {
+        e.preventDefault(); // Secure safety block
+        
+        const currentDistance = getDistanceBetweenTouches(e.touches[0], e.touches[1]);
+        
+        // Ratio multiplier: how far apart did the fingers spread since touchstart?
+        const scaleFactor = currentDistance / initialPinchDistance;
+        
+        // Compute new height based on finger spread
+        let targetHeight = initialRowHeightOnPinch * scaleFactor;
+        
+        // Secure clamping bounds matching your desktop limits
+        targetHeight = Math.max(minEmptyRowHeight, Math.min(targetHeight, maxEmptyRowHeight));
+        
+        // Sync the graphical slider knob value automatically
+        zoomRange.value = targetHeight;
+        
+        // Fire custom position-aware zoom engine around the touch midpoint pivot!
+        applyZoom(targetHeight, 0);
+    }
+}, { passive: false });
+
+viewport.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) {
+        initialPinchDistance = 0; // Clear state machine trackers cleanly
+    }
+}, { passive: false });
+
+    </script>
+
+
+</body>
