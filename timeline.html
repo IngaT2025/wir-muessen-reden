@@ -79,24 +79,6 @@
 
 <script>
 
-const timelineFooter = document.querySelector('body.timeline-page .footer');
-const headerEl = document.querySelector('body.timeline-page header');
-
-function updateTimelineFooterState() {
-    if (!timelineFooter || !viewport) return;
-
-    const viewportNearBottom = viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 24;
-    timelineFooter.classList.toggle('is-visible', viewportNearBottom);
-
-    const footerHeight = timelineFooter.classList.contains('is-visible') ? 180 : 0;
-    const headerHeight = headerEl ? headerEl.offsetHeight : 0;
-    const viewportTarget = Math.max(320, window.innerHeight - headerHeight - footerHeight - 30);
-    viewport.style.height = `${viewportTarget}px`;
-}
-
-window.addEventListener('scroll', updateTimelineFooterState, { passive: true });
-window.addEventListener('resize', updateTimelineFooterState);
-
 // Configuration date range
 const startDate = new Date("2025-01-01");
 const endDate = new Date("2026-02-01");
@@ -194,8 +176,6 @@ sheet.appendChild(row2);
 
 const zoomRange = document.getElementById('zoomRange');
 const viewport = document.getElementById('viewport');
-viewport.addEventListener('scroll', updateTimelineFooterState, { passive: true });
-updateTimelineFooterState();
 
 const minEmptyRowHeight = 1.5; // Condensed down to barcode ticks
 const maxEmptyRowHeight = 35;  // Standard kitchen grid view size
@@ -205,8 +185,7 @@ zoomRange.max = maxEmptyRowHeight;
 zoomRange.value = 10; // minEmptyRowHeight; // Default to overview mode on start
 
 function applyZoom(emptyRowHeightPx, anchorY = 0) {
-    if (!sheet || !viewport) return;
-    const currentScrollTop = viewport.scrollTop;
+    if (!sheet) return;
     const oldEmptyHeight = parseFloat(getComputedStyle(sheet).getPropertyValue('--empty-row-height')) || minEmptyRowHeight;
 
     // Apply the scaling variable to empty rows exclusively
@@ -215,9 +194,12 @@ function applyZoom(emptyRowHeightPx, anchorY = 0) {
     const fadeFactor = (emptyRowHeightPx - 8) / (16 - 8);
     sheet.style.setProperty('--empty-row-opacity', Math.min(Math.max(fadeFactor, 0), 1));
 
-    if (oldEmptyHeight > 0) {
+    // With page scrolling, we keep the current document position stable.
+    if (oldEmptyHeight > 0 && viewport) {
         const ratio = emptyRowHeightPx / oldEmptyHeight;
-        viewport.scrollTop = (currentScrollTop + anchorY) * ratio - anchorY;
+        const currentScrollTop = window.scrollY || 0;
+        const currentOffset = (currentScrollTop + anchorY) * ratio - anchorY;
+        window.scrollTo({ top: currentOffset, behavior: 'auto' });
     }
 }
 
@@ -248,25 +230,30 @@ let isDraggingCanvas = false;
 let startY = 0;
 let startScrollTop = 0;
 
-viewport.addEventListener('mousedown', (e) => {
-    // Ignore drag action if clicking on buttons or input ranges
-    if (e.target.closest('.controls')) return;
-    isDraggingCanvas = true;
-    startY = e.clientY;
-    startScrollTop = viewport.scrollTop;
-    viewport.style.cursor = 'grabbing';
-    e.preventDefault();
-});
+const dragSurface = document.querySelector('.timeline-shell');
+
+if (dragSurface) {
+    dragSurface.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.controls') || e.target.closest('input') || e.target.closest('button')) return;
+        isDraggingCanvas = true;
+        startY = e.clientY;
+        startScrollTop = window.scrollY;
+        dragSurface.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+}
 
 window.addEventListener('mousemove', (e) => {
     if (!isDraggingCanvas) return;
     const deltaY = e.clientY - startY;
-    viewport.scrollTop = startScrollTop - deltaY; // Moves layout naturally with your pointer direction
+    window.scrollTo({ top: startScrollTop - deltaY, behavior: 'auto' });
 });
 
 window.addEventListener('mouseup', () => {
     isDraggingCanvas = false;
-    viewport.style.cursor = 'default';
+    if (dragSurface) dragSurface.style.cursor = 'default';
+    document.body.style.userSelect = '';
 });
 
 // --- HARD OVERRIDE: BLOCKS SAFARI WINDOW ZOOM & IMPLEMENTS CUSTOM PINCH ---
