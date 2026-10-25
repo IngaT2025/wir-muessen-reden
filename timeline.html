@@ -20,6 +20,25 @@
 
     <!--Zeitleiste Daten Start --------------------------------------------------------------- -->
 
+    <div id="html-span-data" style="display: none;">
+        <div class="data-span" date-from="2025-01-10" date-to="2025-02-16">
+            <div class="data-span-label">48 Tage</div>
+            <div class="data-span-details">
+                <p>Erste Planungs- und Vorbereitungsphase.</p>
+                <p>Von 10.01.2025 bis 16.02.2025.</p>
+            </div>
+        </div>
+        <div class="data-span" date-from="2025-02-18" date-to="2025-03-18">
+            <div class="data-span-label">13 Monate und 4 Tage</div>
+            <div class="data-span-details">
+                <p>Darstellung der längeren Gesamtzeitspanne.</p>
+                <p>Von 18.02.2025 bis 18.03.2025.</p>
+            </div>
+        </div>
+    </div>
+
+    <!--Einträge in Zeitleiste Start --------------------------------------------------------- -->
+
     <div id="html-event-data" style="display: none;">
 
         <div class="data-entry" data-date="2025-01-10" data-category="work">
@@ -42,6 +61,7 @@
         </div>
 
     </div>
+    <!--Einträge in Zeitleiste Ende ---------------------------------------------------------- -->
 
     <!--Zeitleiste Daten Ende  --------------------------------------------------------------- -->
 
@@ -101,6 +121,7 @@ document.querySelectorAll('#html-event-data .data-entry').forEach(entry => {
     };
 });
 
+const dateToRowMap = new Map();
 let rowIndex = 0;
 for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     rowIndex += 1;
@@ -119,6 +140,7 @@ for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
 
     // Standardize key layout (YYYY-MM-DD)
     const dateString = d.toISOString().split('T')[0];
+    dateToRowMap.set(dateString, rowIndex);
     const event = myEvents[dateString];
 
     const isWeekend = (d.getDay() === 0 || d.getDay() === 6);
@@ -158,16 +180,33 @@ for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     row.appendChild(contentCell);
     sheet.appendChild(row);
 }
-const row1 = document.createElement('div');
-row1.className = "timeline-span";
-row1.style = "grid-row: 5 / 21;"; 
-row1.innerText = "48 Tage";
-sheet.appendChild(row1);
-const row2 = document.createElement('div');
-row2.className = "timeline-span";
-row2.style = "grid-row: 22 / 78;"; 
-row2.innerText = "13 Monate und  4 Tage";
-sheet.appendChild(row2);
+
+document.querySelectorAll('#html-span-data .data-span').forEach(entry => {
+    const fromDate = entry.getAttribute('date-from');
+    const toDate = entry.getAttribute('date-to');
+    const label = entry.querySelector('.data-span-label')?.innerText?.trim() || entry.innerText.trim();
+    const detailsHTML = entry.querySelector('.data-span-details')?.innerHTML || '';
+
+    if (!fromDate || !toDate || !dateToRowMap.has(fromDate) || !dateToRowMap.has(toDate)) {
+        return;
+    }
+
+    const span = document.createElement('div');
+    span.className = 'timeline-span';
+    span.setAttribute('title', label);
+    span.dataset.details = detailsHTML;
+    span.style.gridRow = `${dateToRowMap.get(fromDate)} / ${dateToRowMap.get(toDate) + 1}`;
+    span.innerText = label;
+
+    span.addEventListener('click', () => {
+        document.getElementById('modalDate').innerText = '';
+        document.getElementById('modalTitle').innerHTML = label;
+        document.getElementById('modalDesc').innerHTML = detailsHTML;
+        document.getElementById('detailsModal').showModal();
+    });
+
+    sheet.appendChild(span);
+});
 
 // SETUP ZOOM
 

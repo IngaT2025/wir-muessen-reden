@@ -150,6 +150,7 @@ body.timeline-page #calendar-sheet {
 }
 
 body.timeline-page .timeline-span {
+    position: relative;
     display: flex;
     grid-column: 1 / 2;
     align-self: stretch;
@@ -170,7 +171,7 @@ body.timeline-page .timeline-span {
     white-space: nowrap;
     min-height: 0;
     height: 100%;
-    overflow: hidden;
+    overflow: visible;
     letter-spacing: 0.04em;
     cursor: pointer;
 }
