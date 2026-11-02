@@ -1,0 +1,26 @@
+1. Create an _includes folder
+
+In your GitHub repository, create a folder named exactly _includes and put your menu file inside it.
+• File path: _includes/menu.html
+
+2. Insert the tag into your pages
+
+In your main HTML files (like index.html), add a small block of text at the very top (called Front Matter), and then use a single tag where you want the menu to appear:
+html
+---
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>My Website</title>
+</head>
+<body>
+
+    <!-- This pulls the menu from _includes/menu.html -->
+    {% include menu.html %}
+
+    <h1>Welcome</h1>
+</body>
+</html>
+
+When you push this to GitHub Pages, their servers will automatically stitch the files together into standard static HTML before serving it to your visitors. It keeps your code clean without changing your "simple static" workflow.
